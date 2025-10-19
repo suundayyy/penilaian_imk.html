@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Penilaian Presentasi UTS - IMK</title>
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .glass { background: rgba(255,255,255,0.65); backdrop-filter: blur(6px); }
+    .score-input::-webkit-outer-spin-button, .score-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    @media print { .no-print { display:none !important } }
+  </style>
+</head>
+<body class="min-h-screen bg-gradient-to-b from-sky-50 to-white font-sans p-6">
+  <div class="max-w-6xl mx-auto">
+    <header class="mb-6">
+      <div class="flex items-center gap-4">
+        <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-white text-2xl font-bold">IMK</div>
+        <div>
+          <h1 class="text-2xl font-semibold text-slate-800">Lembar Penilaian Presentasi UTS</h1>
+          <p class="text-sm text-slate-500">Mata Kuliah: Interaksi Manusia dan Komputer (IMK)</p>
+        </div>
+      </div>
+    </header>
+
+    <main class="glass p-6 rounded-2xl shadow">
+      <!-- Form -->
+      <section class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div>
+          <label class="text-sm text-slate-600">Nama Kelompok</label>
+          <input id="groupName" class="w-full mt-1 p-3 rounded-lg border border-slate-200" placeholder="Contoh: Kelompok A" />
+        </div>
+        <div>
+          <label class="text-sm text-slate-600">Nama Anggota</label>
+          <input id="members" class="w-full mt-1 p-3 rounded-lg border border-slate-200" placeholder="Pisahkan dengan koma" />
+        </div>
+        <div>
+          <label class="text-sm text-slate-600">Judul Presentasi</label>
+          <input id="title" class="w-full mt-1 p-3 rounded-lg border border-slate-200" placeholder="Judul presentasi" />
+        </div>
+        <div>
+          <label class="text-sm text-slate-600">Tanggal</label>
+          <input id="date" type="date" class="w-full mt-1 p-3 rounded-lg border border-slate-200" />
+        </div>
+      </section>
+
+      <!-- Scoring table -->
+      <section class="mb-6">
+        <h2 class="text-lg font-medium text-slate-700 mb-3">Aspek Penilaian</h2>
+        <div class="overflow-x-auto">
+          <table class="w-full table-auto text-sm">
+            <thead>
+              <tr class="text-left text-slate-600">
+                <th class="p-3">Aspek</th>
+                <th class="p-3">Deskripsi</th>
+                <th class="p-3">Skor (1–5)</th>
+                <th class="p-3">Bobot (%)</th>
+                <th class="p-3">Nilai Tertimbang</th>
+              </tr>
+            </thead>
+            <tbody id="rows" class="text-slate-700"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="flex flex-col md:flex-row gap-3 md:items-center md:justify-between no-print">
+        <div class="flex gap-3">
+          <button id="calcBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg shadow">Hitung Nilai</button>
+          <button id="saveBtn" class="px-4 py-2 bg-emerald-600 text-white rounded-lg shadow">Simpan Nilai</button>
+          <button id="resetBtn" class="px-4 py-2 bg-white border border-slate-200 rounded-lg">Reset Form</button>
+          <button id="clearAllBtn" class="px-4 py-2 bg-red-600 text-white rounded-lg">Hapus Semua Data</button>
+        </div>
+        <div class="flex gap-3">
+          <button id="exportCsvAll" class="px-4 py-2 bg-amber-500 text-white rounded-lg shadow">Ekspor Rekap (CSV)</button>
+          <button id="printBtn" class="px-4 py-2 bg-sky-600 text-white rounded-lg shadow">Cetak / Print</button>
+        </div>
+      </section>
+
+      <!-- Result card -->
+      <section id="resultCard" class="mt-6 hidden">
+        <div class="rounded-xl border border-slate-100 p-5 bg-white shadow-sm">
+          <div class="flex flex-col md:flex-row md:justify-between gap-4">
+            <div>
+              <h3 class="text-xl font-semibold text-slate-800" id="resTitle">Hasil Penilaian</h3>
+              <p class="text-sm text-slate-500" id="resMeta"></p>
+            </div>
+            <div class="flex items-center gap-6">
+              <div class="text-center">
+                <div class="text-3xl font-bold text-slate-800" id="finalScore">0</div>
+                <div class="text-sm text-slate-500">Nilai Angka</div>
+              </div>
+              <div class="text-center">
+                <div class="text-3xl font-bold text-indigo-600" id="finalGrade">-</div>
+                <div class="text-sm text-slate-500">Nilai Huruf</div>
+              </div>
+            </div>
+          </div>
+
+          <hr class="my-4" />
+          <div id="detailedList" class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-slate-700"></div>
+
+          <div class="mt-4">
+            <label class="text-sm text-slate-600">Catatan Dosen:</label>
+            <textarea id="notes" class="w-full mt-1 p-3 rounded-lg border border-slate-200" rows="3" placeholder="Catatan/komentar untuk kelompok..."></textarea>
+          </div>
+        </div>
+      </section>
+
+      <!-- Rekap table -->
+      <section class="mt-8">
+        <h2 class="text-lg font-medium text-slate-700 mb-3">Rekap Penilaian (Disimpan)</h2>
+        <div class="overflow-x-auto bg-white rounded-lg shadow p-4">
+          <table class="w-full table-auto text-sm" id="rekapTable">
+            <thead>
+              <tr class="text-left text-slate-600">
+                <th class="p-2">#</th>
+                <th class="p-2">Kelompok</th>
+                <th class="p-2">Anggota</th>
+                <th class="p-2">Judul</th>
+                <th class="p-2">Tanggal</th>
+                <th class="p-2">Nilai</th>
+                <th class="p-2">Huruf</th>
+                <th class="p-2">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="rekapBody" class="text-slate-700"></tbody>
+          </table>
+          <p class="text-xs text-slate-500 mt-2">Data disimpan di browser (localStorage). Tidak hilang saat refresh. Untuk memindahkan ke komputer lain, gunakan tombol Ekspor Rekap.</p>
+        </div>
+      </section>
+
+    </main>
+
+    <footer class="text-center text-slate-500 text-sm mt-6">pakyaaTech.</footer>
+  </div>
+
+  <script>
+    // Default aspek & bobot
+    const aspects = [
+      { key: 'penguasaan', label: 'Penguasaan Materi', desc: 'Memahami konsep IMK dan menjelaskan penerapan.', weight: 25 },
+      { key: 'relevansi', label: 'Relevansi Isi & Kedalaman Analisis', desc: 'Kesesuaian topik dengan teori dan praktik.', weight: 20 },
+      { key: 'presentasi', label: 'Keterampilan Presentasi', desc: 'Gaya penyampaian, artikulasi, & jawaban pertanyaan.', weight: 15 },
+      { key: 'visual', label: 'Visualisasi & Media Presentasi', desc: 'Desain slide / prototype dan keterbacaan.', weight: 15 },
+      { key: 'kolaborasi', label: 'Kolaborasi & Pembagian Tugas', desc: 'Keterlibatan semua anggota dan pembagian peran.', weight: 15 },
+      { key: 'kreativitas', label: 'Kreativitas & Inovasi', desc: 'Originalitas ide dan pendekatan baru.', weight: 10 }
+    ];
+
+    const rowsEl = document.getElementById('rows');
+    const rekapKey = 'imk_rekap_penilaian_v1'; // localStorage key
+
+    function createRows() {
+      rowsEl.innerHTML = '';
+      aspects.forEach(a => {
+        const tr = document.createElement('tr');
+        tr.className = 'border-t';
+        tr.innerHTML = `
+          <td class="p-3 align-top font-medium">${a.label}</td>
+          <td class="p-3 align-top text-slate-600 text-sm">${a.desc}</td>
+          <td class="p-3 align-top">
+            <input type="number" min="1" max="5" step="1" class="score-input w-20 p-2 rounded border border-slate-200" id="score_${a.key}" placeholder="-" />
+          </td>
+          <td class="p-3 align-top">${a.weight}%</td>
+          <td class="p-3 align-top"><span id="weighted_${a.key}" class="font-medium">-</span></td>
+        `;
+        rowsEl.appendChild(tr);
+      });
+    }
+
+    createRows();
+
+    function compute(showAlertIfInvalid = true) {
+      const scores = {};
+      let total = 0;
+      let valid = true;
+      aspects.forEach(a => {
+        const el = document.getElementById('score_' + a.key);
+        const v = parseFloat(el.value);
+        if (isNaN(v) || v < 1 || v > 5) {
+          valid = false;
+        }
+        scores[a.key] = isNaN(v) ? 0 : v;
+      });
+      if (!valid) {
+        if (showAlertIfInvalid) alert('Mohon isi semua skor dengan angka antara 1 sampai 5.');
+        return null;
+      }
+
+      aspects.forEach(a => {
+        const s = scores[a.key];
+        const percent = ((s - 1) / 4) * 100; // map 1..5 -> 0..100
+        const weighted = (percent * a.weight) / 100;
+        total += weighted;
+        document.getElementById('weighted_' + a.key).innerText = weighted.toFixed(2);
+      });
+
+      const final = parseFloat(total.toFixed(2));
+      const grade = toLetter(final);
+
+      // populate result card
+      document.getElementById('finalScore').innerText = final;
+      document.getElementById('finalGrade').innerText = grade;
+
+      const gName = document.getElementById('groupName').value || '-';
+      const title = document.getElementById('title').value || '-';
+      const date = document.getElementById('date').value || '-';
+      const members = document.getElementById('members').value || '-';
+      document.getElementById('resMeta').innerText = `${gName} — ${title} — ${date}\nAnggota: ${members}`;
+
+      const detail = document.getElementById('detailedList');
+      detail.innerHTML = '';
+      aspects.forEach(a => {
+        const el = document.createElement('div');
+        el.className = 'p-3 border rounded-md bg-slate-50';
+        el.innerHTML = `<div class="font-semibold">${a.label} <span class='text-sm font-normal text-slate-500'>(${a.weight}%)</span></div><div class='text-sm text-slate-600 mt-1'>Skor: ${scores[a.key]} — Nilai tertimbang: ${document.getElementById('weighted_'+a.key).innerText}</div>`;
+        detail.appendChild(el);
+      });
+
+      document.getElementById('resultCard').classList.remove('hidden');
+
+      return { scores, final, grade };
+    }
+
+    function toLetter(n) {
+      if (n >= 85) return 'A';
+      if (n >= 80) return 'A-';
+      if (n >= 75) return 'B+';
+      if (n >= 70) return 'B';
+      if (n >= 65) return 'B-';
+      if (n >= 60) return 'C+';
+      if (n >= 55) return 'C';
+      if (n >= 50) return 'D';
+      return 'E';
+    }
+
+    document.getElementById('calcBtn').addEventListener('click', () => compute(true));
+
+    document.getElementById('saveBtn').addEventListener('click', () => {
+      const result = compute(true);
+      if (!result) return;
+      const gName = document.getElementById('groupName').value || '';
+      const members = document.getElementById('members').value || '';
+      const title = document.getElementById('title').value || '';
+      const date = document.getElementById('date').value || '';
+      const notes = document.getElementById('notes').value || '';
+
+      const entry = {
+        id: Date.now(),
+        group: gName,
+        members,
+        title,
+        date,
+        scores: result.scores,
+        final: result.final,
+        grade: result.grade,
+        notes
+      };
+
+      const all = loadEntries();
+      all.push(entry);
+      localStorage.setItem(rekapKey, JSON.stringify(all));
+      renderRekap();
+      // keep form filled so user can continue; show small toast
+      showToast('Nilai tersimpan ke rekap.');
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      resetForm();
+    });
+
+    document.getElementById('clearAllBtn').addEventListener('click', () => {
+      if (!confirm('Anda yakin ingin menghapus semua data rekap? Tindakan ini tidak dapat dibatalkan.')) return;
+      localStorage.removeItem(rekapKey);
+      renderRekap();
+      showToast('Semua data rekap dihapus.');
+    });
+
+    document.getElementById('printBtn').addEventListener('click', () => window.print());
+
+    document.getElementById('exportCsvAll').addEventListener('click', () => {
+      const all = loadEntries();
+      if (!all.length) { alert('Tidak ada data rekap untuk diekspor.'); return; }
+      let csv = 'No,Kelompok,Anggota,Judul,Tanggal,Nilai,Huruf,Catatan\n';
+      all.forEach((e, i) => {
+        csv += `${i+1},"${e.group}","${e.members}","${e.title}","${e.date}",${e.final},${e.grade},"${(e.notes||'').replace(/"/g,'""')}"\n`;
+      });
+      downloadBlob(csv, `rekap_penilaian_imk_${new Date().toISOString().slice(0,10)}.csv`, 'text/csv');
+    });
+
+    function downloadBlob(content, filename, type) {
+      const blob = new Blob([content], { type: type + ';charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function loadEntries() {
+      try {
+        const raw = localStorage.getItem(rekapKey);
+        return raw ? JSON.parse(raw) : [];
+      } catch (e) {
+        console.error(e);
+        return [];
+      }
+    }
+
+    function renderRekap() {
+      const all = loadEntries();
+      const body = document.getElementById('rekapBody');
+      body.innerHTML = '';
+      all.forEach((e, i) => {
+        const tr = document.createElement('tr');
+        tr.className = 'border-t';
+        tr.innerHTML = `
+          <td class="p-2 align-top">${i+1}</td>
+          <td class="p-2 align-top font-medium">${escapeHtml(e.group)}</td>
+          <td class="p-2 align-top">${escapeHtml(e.members)}</td>
+          <td class="p-2 align-top">${escapeHtml(e.title)}</td>
+          <td class="p-2 align-top">${escapeHtml(e.date)}</td>
+          <td class="p-2 align-top font-semibold">${e.final}</td>
+          <td class="p-2 align-top text-indigo-600 font-semibold">${e.grade}</td>
+          <td class="p-2 align-top">
+            <button data-id="${e.id}" class="editBtn px-2 py-1 text-sm bg-white border rounded mr-1">Lihat</button>
+            <button data-id="${e.id}" class="delBtn px-2 py-1 text-sm bg-red-600 text-white rounded">Hapus</button>
+          </td>
+        `;
+        body.appendChild(tr);
+      });
+
+      // attach handlers
+      document.querySelectorAll('.delBtn').forEach(b => b.addEventListener('click', (ev) => {
+        const id = Number(ev.currentTarget.getAttribute('data-id'));
+        deleteEntry(id);
+      }));
+
+      document.querySelectorAll('.editBtn').forEach(b => b.addEventListener('click', (ev) => {
+        const id = Number(ev.currentTarget.getAttribute('data-id'));
+        loadEntryToForm(id);
+      }));
+    }
+
+    function deleteEntry(id) {
+      if (!confirm('Hapus entri ini?')) return;
+      const all = loadEntries().filter(e => e.id !== id);
+      localStorage.setItem(rekapKey, JSON.stringify(all));
+      renderRekap();
+      showToast('Entri dihapus.');
+    }
+
+    function loadEntryToForm(id) {
+      const all = loadEntries();
+      const e = all.find(x => x.id === id);
+      if (!e) { alert('Entri tidak ditemukan.'); return; }
+      document.getElementById('groupName').value = e.group;
+      document.getElementById('members').value = e.members;
+      document.getElementById('title').value = e.title;
+      document.getElementById('date').value = e.date;
+      document.getElementById('notes').value = e.notes || '';
+      // fill scores
+      aspects.forEach(a => {
+        const el = document.getElementById('score_' + a.key);
+        el.value = e.scores[a.key] || '';
+      });
+      compute(false);
+      // scroll to result
+      window.scrollTo({ top: document.getElementById('resultCard').offsetTop - 80, behavior: 'smooth' });
+    }
+
+    function resetForm() {
+      document.querySelectorAll('.score-input').forEach(i => i.value = '');
+      document.getElementById('resultCard').classList.add('hidden');
+      document.getElementById('groupName').value = '';
+      document.getElementById('members').value = '';
+      document.getElementById('title').value = '';
+      document.getElementById('date').value = '';
+      document.getElementById('notes').value = '';
+      document.querySelectorAll('[id^="weighted_"]').forEach(el => el.innerText = '-');
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      return text.replace(/[&<>\"']/g, function(m) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[m]; });
+    }
+
+    function showToast(msg, duration=2000) {
+      const t = document.createElement('div');
+      t.className = 'fixed bottom-6 right-6 bg-slate-800 text-white px-4 py-2 rounded shadow-lg no-print';
+      t.innerText = msg;
+      document.body.appendChild(t);
+      setTimeout(()=>{ t.classList.add('opacity-0'); setTimeout(()=>t.remove(),300); }, duration);
+    }
+
+    // initial render
+    renderRekap();
+
+  </script>
+</body>
+</html>
